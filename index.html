@@ -260,6 +260,36 @@ async function init(){
   dictCap=makeDictation();
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
   await reload();render();
+  await loadDailyQuestions();
+  await reload();
+  if(view==='menu')render();
+}
+async function loadDailyQuestions(){
+  try{
+    const response=await fetch('./daily-cards.json',{cache:'no-store'});
+    if(!response.ok)return;
+    const pack=await response.json();
+    if(!Array.isArray(pack.questions))return;
+    await mergeQuestions(pack.questions);
+  }catch(error){
+    console.warn('Dnevni paket ni dosegljiv.',error);
+  }
+}
+async function mergeQuestions(items,onProgress=()=>{}){
+  let cr=0,up=0,same=0,bad=0;const badIds=[];
+  for(let i=0;i<items.length;i++){const it=items[i];onProgress('Uvažam '+(i+1)+'/'+items.length+'…');
+    if(!it||!it.id||!it.subject||!it.question){bad++;badIds.push(it&&it.id||('#'+(i+1)));continue;}
+    const id=String(it.id).trim().replace(/[^\w\-]/g,'_');
+    const content={subject:String(it.subject),pdfRef:it.pdfRef||'',excerptText:it.excerptText||'',excerptImageUrl:it.excerptImageUrl||null,
+      question:String(it.question),criteria:Array.isArray(it.criteria)?it.criteria.map(String):[],kind:it.kind||'qa'};
+    try{const ref=db.doc('cards/'+id),snap=await ref.get();
+      if(!snap.exists){const d=it.date||today();
+        await ref.set(Object.assign({},content,{dateAdded:d,status:'new',dueDate:d,intervalLevel:0,unfinished:false,lastAttemptAt:null,history:[]}));cr++;}
+      else{const ex=snap.data();
+        if(Object.keys(content).every(k=>JSON.stringify(ex[k]==null?null:ex[k])===JSON.stringify(content[k]==null?null:content[k])))same++;
+        else{await ref.update(content);up++;}}
+    }catch(e){console.error(e);bad++;badIds.push(id+': '+(e.message||e));}}
+  return {cr,up,same,bad,badIds};
 }
 async function reload(){
   try{cards=docs(await db.collection('cards').get());}catch(e){toast('Napaka pri branju kartic: '+(e.message||e));}
@@ -581,19 +611,7 @@ async function doImport(raw){let items;
   try{items=JSON.parse(raw);}catch(e){say('JSON ni veljaven: '+e.message);return;}
   if(items&&!Array.isArray(items)&&Array.isArray(items.questions))items=items.questions;
   if(!Array.isArray(items)){say('Pričakovan je seznam vprašanj.');return;}
-  let cr=0,up=0,same=0,bad=0;const badIds=[];
-  for(let i=0;i<items.length;i++){const it=items[i];say('Uvažam '+(i+1)+'/'+items.length+'…');
-    if(!it||!it.id||!it.subject||!it.question){bad++;badIds.push(it&&it.id||('#'+(i+1)));continue;}
-    const id=String(it.id).trim().replace(/[^\w\-]/g,'_');
-    const content={subject:String(it.subject),pdfRef:it.pdfRef||'',excerptText:it.excerptText||'',excerptImageUrl:it.excerptImageUrl||null,
-      question:String(it.question),criteria:Array.isArray(it.criteria)?it.criteria.map(String):[],kind:it.kind||'qa'};
-    try{const ref=db.doc('cards/'+id),snap=await ref.get();
-      if(!snap.exists){const d=it.date||today();
-        await ref.set(Object.assign({},content,{dateAdded:d,status:'new',dueDate:d,intervalLevel:0,unfinished:false,lastAttemptAt:null,history:[]}));cr++;}
-      else{const ex=snap.data();
-        if(Object.keys(content).every(k=>JSON.stringify(ex[k]==null?null:ex[k])===JSON.stringify(content[k]==null?null:content[k])))same++;
-        else{await ref.update(content);up++;}}
-    }catch(e){console.error(e);bad++;badIds.push(id+': '+(e.message||e));}}
+  const {cr,up,same,bad,badIds}=await mergeQuestions(items,say);
   await reload();
   say('Novih: '+cr+' · posodobljenih: '+up+' · brez sprememb: '+same+' · napak: '+bad+(badIds.length?' ('+badIds.slice(0,4).join('; ')+')':''));
 }
