@@ -137,6 +137,13 @@ textarea.mono{width:100%;min-height:130px;background:var(--card2);border:1px sol
 input.txt{flex:1;min-width:0;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.9rem;font-family:inherit}
 .filebtn{display:block;text-align:center;cursor:pointer;background:var(--ink);color:#FFFDF8;border-radius:12px;padding:14px;font-weight:600;font-size:.92rem;margin-bottom:9px}
 .filebtn input{display:none}
+.pastezone{border:2px dashed var(--line2);border-radius:12px;padding:18px 12px;text-align:center;color:var(--ink2);font-size:.85rem;cursor:text;margin-bottom:9px;background:var(--card2)}
+.pastezone:focus{outline:none;border-color:var(--ac);color:var(--ink)}
+.imgprev{margin-top:9px}
+.imgprev img{width:100%;border-radius:11px;border:1px solid var(--line);box-shadow:var(--sh);display:block}
+.imgprev .acts{margin-top:8px}
+.copybox{display:flex;gap:8px;margin-top:8px}
+.copybox button{flex:none}
 pre.raw{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.72rem;margin:6px 0 0}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 #lb{position:fixed;inset:0;background:rgba(30,28,22,.94);display:none;z-index:100;overflow:auto}
@@ -594,12 +601,29 @@ function renderUvoz(){
   $('app').innerHTML=backBar('Uvoz vprašanj')+
     '<div class="panel"><label class="filebtn">Izberi .json datoteko<input type="file" accept=".json,application/json" id="fi"></label>'+
     '<div class="muted">Isti <b>id</b> se nikoli ne podvoji: vsebina se posodobi, ocene in urnik ostanejo.</div><div id="msg" class="rbox" style="display:none"></div></div>'+
+    '<div class="panel"><h2>Dodaj sliko izrezka</h2>'+
+    '<div class="muted" style="margin-bottom:8px">Izberi sliko iz galerije ali jo prilepi (kopiraj sliko kjerkoli, nato tapni spodnje polje in prilepi). Slika se samodejno stisne in pretvori v kodo za polje <b>excerptImageUrl</b>.</div>'+
+    '<label class="filebtn">Izberi sliko iz galerije<input type="file" accept="image/*" id="imgpick"></label>'+
+    '<div class="pastezone" id="pastezone" contenteditable="true" data-ph="Tapni sem, nato prilepi (dolg pritisk → Prilepi)" data-empty="1">Tapni sem, nato prilepi (dolg pritisk → Prilepi)</div>'+
+    '<div id="imgprev"></div></div>'+
     '<div class="panel"><h2>Ali prilepi JSON</h2><textarea class="mono" id="box" placeholder="[ { ... } ]"></textarea>'+
     '<button class="rand" id="imp" style="margin-top:8px">Uvozi iz polja</button>'+
     '<pre class="raw muted">{ "id": "trajni-id-pojma", "subject": "MAT", "date": "2026-11-25",\n  "pdfRef": "vir, stran", "excerptText": "…",\n  "excerptImageUrl": "data:image/webp;base64,… ali null",\n  "question": "…", "criteria": ["…"], "kind": "qa" }</pre></div>'+
     '<div class="panel"><h2>Varnostna kopija</h2><div class="muted">Vsi podatki so shranjeni samo v tem brskalniku (localStorage). Redno izvozi kopijo, da jih ne izgubiš ob menjavi naprave ali brisanju podatkov brskalnika.</div>'+
     '<div class="acts" style="margin-top:10px"><button class="b-sec" id="exp">Izvozi kopijo (.json)</button><label class="filebtn" style="flex:1;margin:0"><span style="display:block">Uvozi kopijo</span><input type="file" accept=".json,application/json" id="impAll"></label></div></div>';
   wireBack();
+  $('imgpick').onchange=ev=>{const f=ev.target.files&&ev.target.files[0];if(f)handleImgFile(f);ev.target.value='';};
+  const pz=$('pastezone');
+  pz.addEventListener('focus',()=>{if(pz.textContent.trim()===pz.dataset.ph)pz.textContent='';});
+  pz.addEventListener('blur',()=>{if(!pz.textContent.trim())pz.textContent=pz.dataset.ph;});
+  pz.addEventListener('paste',ev=>{
+    ev.preventDefault();
+    const items=(ev.clipboardData&&ev.clipboardData.items)||[];
+    let found=null;
+    for(const it of items)if(it.type&&it.type.indexOf('image/')===0){found=it.getAsFile();break;}
+    if(found){handleImgFile(found);pz.textContent='Slika prilepljena ✓';}
+    else{pz.textContent='V odložišču ni bilo slike — poskusi kopirati sliko (ne besedila) in znova prilepi.';}
+  });
   $('imp').onclick=()=>doImport($('box').value);
   $('fi').onchange=ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;say('Berem datoteko ('+Math.round(f.size/1024)+' KB)…');
     const r=new FileReader();r.onload=()=>doImport(r.result);r.onerror=()=>say('Datoteke ni bilo mogoče prebrati.');r.readAsText(f);};
@@ -607,6 +631,44 @@ function renderUvoz(){
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ustni-trener-kopija-'+today()+'.json';a.click();URL.revokeObjectURL(a.href);};
   $('impAll').onchange=ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;
     const r=new FileReader();r.onload=async()=>{try{await db.importAll(JSON.parse(r.result));await reload();say('Varnostna kopija uvožena.');}catch(e){say('Napaka pri uvozu kopije: '+e.message);}};r.readAsText(f);};
+}
+function imageToDataUrl(file){return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onerror=()=>reject(new Error('branje ni uspelo'));
+  reader.onload=()=>{
+    const img=new Image();
+    img.onerror=()=>reject(new Error('slike ni mogoče prebrati'));
+    img.onload=()=>{
+      const maxW=1100,scale=Math.min(1,maxW/img.width);
+      const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      let url;try{url=cv.toDataURL('image/webp',.82);}catch(e){url=cv.toDataURL('image/jpeg',.82);}
+      if(!url||url.indexOf('data:image/webp')!==0&&url.indexOf('data:image/jpeg')!==0)url=cv.toDataURL('image/png');
+      resolve(url);
+    };
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+});}
+let lastImgDataUrl=null;
+async function handleImgFile(file){
+  const box=$('imgprev');box.innerHTML='<div class="muted">Obdelujem sliko…</div>';
+  try{
+    const url=await imageToDataUrl(file);
+    lastImgDataUrl=url;
+    const kb=Math.round(url.length*0.75/1024);
+    box.innerHTML='<img src="'+url+'" alt="izrezek">'+
+      '<div class="muted" style="margin-top:6px">~'+kb+' KB po stiskanju</div>'+
+      '<div class="copybox"><button class="b-sec" id="imgcopy">Kopiraj kodo slike</button>'+
+      '<button class="b-sec" id="imgfill">Vstavi v predlogo spodaj</button></div>';
+    $('imgcopy').onclick=async()=>{try{await navigator.clipboard.writeText(lastImgDataUrl);$('imgcopy').textContent='Kopirano ✓';}catch(e){say('Kopiranje ni uspelo — kodo ročno izberi iz polja spodaj.');}};
+    $('imgfill').onclick=()=>{
+      const tpl='[\n  {\n    "id": "spremeni-me",\n    "subject": "MAT",\n    "date": "'+today()+'",\n    "pdfRef": "",\n    "excerptText": "",\n    "excerptImageUrl": "'+lastImgDataUrl+'",\n    "question": "",\n    "criteria": [],\n    "kind": "qa"\n  }\n]';
+      $('box').value=tpl;$('box').scrollIntoView({behavior:'smooth',block:'center'});
+      say('Predloga s sliko vstavljena v polje spodaj — dopolni id, predmet in vprašanje, nato "Uvozi iz polja".');
+    };
+  }catch(e){box.innerHTML='<div class="err">Slike ni bilo mogoče obdelati: '+esc(e.message||'')+'</div>';}
 }
 function say(t){const m=$('msg');if(m){m.style.display='block';m.textContent=t;}}
 async function doImport(raw){let items;
