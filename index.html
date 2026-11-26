@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F5F1E8">
+<meta name="description" content="Ustni trener – samostojna aplikacija za ustno učenje (MAT, KS)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ustni trener">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Ustni trener</title>
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']]},svg:{fontCache:'global'},options:{enableMenu:false},startup:{typeset:false}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+:root{
+ --paper:#F5F1E8;--card:#FFFDF8;--card2:#FAF7EF;
+ --ink:#22221F;--ink2:#5F5E5A;--ink3:#918F82;--line:#E4DFD2;--line2:#D3CDBC;
+ --ok:#1D9E75;--okbg:#E1F5EE;--warn:#BA7517;--warnbg:#FAEEDA;--bad:#C0392B;--badbg:#FBEAE7;
+ --ac:#6A5ACD;--acbg:#EDEBFB;
+ --sh:0 1px 2px rgba(60,50,30,.06),0 8px 22px -14px rgba(60,50,30,.25);
+ --serif:Georgia,"Iowan Old Style",Palatino,serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.6;
+ font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;min-height:100vh;
+ background-image:radial-gradient(circle at 15% 5%,rgba(255,255,255,.75),transparent 55%)}
+.wrap{max-width:680px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top)) 13px calc(70px + env(safe-area-inset-bottom))}
+button{font-family:inherit;color:inherit}
+.hd{display:flex;align-items:center;gap:8px;margin:2px 2px 8px}
+.hd-t{font-family:var(--serif);font-size:1.08rem;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hd-t span{font-size:.76rem;color:var(--ink2);font-weight:400}
+.gear{flex:none;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--ink2);border-radius:9px;padding:6px 11px;font-size:.8rem;font-weight:600}
+.gear.on{background:var(--ink);color:#FFFDF8;border-color:var(--ink)}
+.setp{display:none;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.setp.show{display:flex}
+.setp button{flex:1 1 30%;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:10px 4px;font-size:.79rem;font-weight:600}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 13px;box-shadow:var(--sh);margin-bottom:10px}
+.hrow{display:flex;align-items:center;gap:12px}
+.ring{position:relative;width:56px;height:56px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+.ring .bg{stroke:var(--line)} .ring .fg{stroke:var(--ok);transition:stroke-dasharray .6s}
+.ring .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.ring .lab b{font-size:.8rem;line-height:1}
+.hstat{flex:1;min-width:0}.hstat .big{font-size:.95rem;font-weight:600;line-height:1.25}.hstat .sm{color:var(--ink2);font-size:.74rem;margin-top:2px;line-height:1.4}
+.streak{flex:none;text-align:center;padding:4px 10px;border-radius:10px;background:var(--warnbg);border:1px solid #EBD9B4}
+.streak b{display:block;font-size:1.1rem;line-height:1.1;color:var(--warn);font-family:var(--serif)}
+.streak span{font-size:.6rem;color:#8A6512;letter-spacing:.06em;text-transform:uppercase}
+.filts{display:flex;gap:6px;margin-bottom:4px}
+.filts button{flex:1;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:9px 2px;font-size:.79rem;font-weight:700}
+.filts button.on{background:var(--ink);color:#FFFDF8;border-color:var(--ink)}
+.rand{width:100%;cursor:pointer;background:var(--ink);border:none;color:#FFFDF8;border-radius:12px;padding:14px;font-size:.95rem;font-weight:600;margin-bottom:9px;box-shadow:var(--sh)}
+.rand:disabled{opacity:.5}
+.sect{font-weight:700;font-size:.8rem;margin:12px 2px 6px;padding:4px 12px;border-radius:99px;display:inline-block}
+.list{display:flex;flex-direction:column;gap:6px}
+.qrow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;background:var(--card);
+ border:1px solid var(--line);border-radius:11px;padding:12px 13px;color:var(--ink);font-size:.89rem;box-shadow:var(--sh)}
+.qrow .n{color:var(--ink3);font-weight:700;min-width:22px;font-variant-numeric:tabular-nums}
+.qrow .t{flex:1;line-height:1.35;min-width:0;overflow-wrap:anywhere}
+.qrow .t small{display:block;color:var(--ink3);font-size:.7rem;margin-top:2px}
+.qrow .sc{font-weight:700;min-width:26px;text-align:right;color:var(--ink3)}
+.qrow.g1{border-left:4px solid var(--bad)}.qrow.g1 .sc{color:var(--bad)}
+.qrow.g2{border-left:4px solid var(--warn)}.qrow.g2 .sc{color:var(--warn)}
+.qrow.g3{border-left:4px solid var(--ok)}.qrow.g3 .sc{color:var(--ok)}
+.top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.top button{cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:8px 12px;font-size:.82rem;font-weight:600}
+.dayline{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dl-bar{flex:1;height:9px;background:var(--line);border-radius:99px;overflow:hidden}
+.dl-bar i{display:block;height:100%;width:0;background:var(--ok);border-radius:99px;transition:width .5s}
+.dl-txt{flex:none;font-size:.78rem;font-weight:700;color:var(--ink2);font-variant-numeric:tabular-nums}
+.qcard{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:18px 17px;box-shadow:var(--sh);margin-bottom:11px}
+.qtag{display:inline-block;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 11px;border-radius:99px;background:var(--acbg);color:var(--ac)}
+.qsrc{font-size:.74rem;color:var(--ink3);margin-top:7px}
+.qt{font-family:var(--serif);font-size:1.3rem;line-height:1.32;font-weight:600;margin-top:8px;overflow-wrap:anywhere}
+.speak{color:var(--ink2);font-size:.79rem;margin-top:9px}
+.hintb{width:100%;cursor:pointer;background:none;border:1px dashed var(--line2);color:var(--ac);border-radius:11px;padding:11px;font-weight:600;font-size:.85rem;margin-bottom:9px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.kchip{background:var(--acbg);color:var(--ac);border-radius:14px;padding:5px 12px;font-size:.79rem;font-weight:600}
+.kchip.tog{cursor:pointer;background:var(--card2);color:var(--ink2);border:1px solid var(--line)}
+.kchip.tog.on{background:var(--okbg);color:#0F6E56;border-color:#BFE6D8}
+.kbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh)}
+.kbox .lab{font-size:.8rem;color:var(--ink2);margin-bottom:8px}
+.ksugg{margin-top:9px;font-size:.84rem;color:var(--ac);font-weight:700}
+.inrow{display:flex;gap:8px;align-items:stretch;margin-bottom:9px}
+.mic{flex:none;width:58px;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.66rem;font-weight:700;color:var(--ink2)}
+.mic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mic.live{background:var(--bad);border-color:var(--bad);color:#fff;animation:pulse 1.2s infinite}
+.mic:disabled{opacity:.45;cursor:not-allowed}
+@keyframes pulse{50%{opacity:.65}}
+#ta{flex:1;min-width:0;min-height:96px;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:11px;font-size:.95rem;font-family:inherit}
+.micst{font-size:.8rem;color:var(--ink2);min-height:1.2em;margin:-4px 2px 7px}
+.grade{width:100%;cursor:pointer;background:var(--ink);border:none;color:#FFFDF8;border-radius:13px;padding:16px;font-size:1.02rem;font-weight:600;margin-bottom:11px;box-shadow:var(--sh)}
+.grade:disabled{opacity:.5}
+.bigsc{text-align:center;font-family:var(--serif);font-size:3.4rem;font-weight:600;line-height:1;margin:8px 0}
+.bigsc small{font-size:1.05rem;color:var(--ink3)}
+.rbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:8px;font-size:.9rem;line-height:1.55;box-shadow:var(--sh);overflow-wrap:anywhere}
+.rbox.plus{background:var(--acbg);border-color:var(--line2)}
+.rbox ul{margin:.4em 0;padding-left:1.15em}
+.err{background:var(--badbg);border:1px solid #E8C4BC;color:#8E2A1E;border-radius:11px;padding:11px;font-size:.85rem;margin-top:8px;overflow-wrap:anywhere}
+.acts{display:flex;gap:7px;margin-bottom:9px}
+.acts button{flex:1;cursor:pointer;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:.9rem;font-weight:600;box-shadow:var(--sh)}
+.b-next{background:var(--ink);color:#FFFDF8;border-color:var(--ink)!important}
+.b-sec{background:var(--card);color:var(--ink2)}
+.sol{display:none;animation:fade .3s ease;margin-bottom:11px}.sol.show{display:block}
+.solbtn{width:100%;cursor:pointer;background:var(--card);border:1px solid var(--line2);color:var(--ac);border-radius:12px;padding:14px;font-size:.95rem;font-weight:600;margin-bottom:10px;box-shadow:var(--sh)}
+.solbtn.open{background:var(--acbg);border-color:var(--ac)}
+.sep{display:flex;align-items:center;gap:9px;margin:16px 0 11px;color:var(--ink3);font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:var(--line)}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ansbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;font-size:.97rem;line-height:1.65;box-shadow:var(--sh);white-space:pre-wrap;overflow-wrap:anywhere}
+.cropimg{width:100%;border-radius:11px;background:#fff;border:1px solid var(--line);margin-top:9px;cursor:zoom-in;box-shadow:var(--sh);display:block}
+.sghint{font-size:.79rem;color:var(--ink2);text-align:center;margin:13px 0 7px}
+.nums{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:9px}
+.rnum{cursor:pointer;border:1px solid var(--line);border-radius:11px;padding:13px 0;flex:1 1 44px;min-width:44px;font-weight:700;font-size:1.15rem;text-align:center;background:var(--card);box-shadow:var(--sh)}
+.rnum.g1{color:var(--bad)}.rnum.g2{color:var(--warn)}.rnum.g3{color:#0F6E56}
+.rnum.sel{background:var(--ink);color:#FFFDF8;border-color:var(--ink)}
+.star2{width:100%;cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--ink3);border-radius:11px;padding:12px;font-weight:600;margin-bottom:10px}
+.star2.on{color:var(--warn);border-color:#EBD9B4;background:var(--warnbg)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:var(--sh);margin-bottom:11px}
+.panel h2{font-family:var(--serif);font-size:1.05rem;margin:0 0 8px}
+.muted{color:var(--ink2);font-size:.82rem}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.st{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 4px;text-align:center}
+.st b{display:block;font-family:var(--serif);font-size:1.25rem;line-height:1.1}
+.st span{font-size:.66rem;color:var(--ink2)}
+.st.h{background:var(--okbg);border-color:#BFE6D8}
+textarea.mono{width:100%;min-height:130px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:ui-monospace,monospace;font-size:.75rem}
+input.txt{flex:1;min-width:0;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.9rem;font-family:inherit}
+.filebtn{display:block;text-align:center;cursor:pointer;background:var(--ink);color:#FFFDF8;border-radius:12px;padding:14px;font-weight:600;font-size:.92rem;margin-bottom:9px}
+.filebtn input{display:none}
+pre.raw{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.72rem;margin:6px 0 0}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+#lb{position:fixed;inset:0;background:rgba(30,28,22,.94);display:none;z-index:100;overflow:auto}
+#lb.show{display:block}
+#lb img{display:block;width:100%;margin:56px 0 20px;background:#fff}
+#lb img.big{width:230%;max-width:none}
+#lbx{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;background:#FFFDF8;border:none;border-radius:99px;padding:8px 14px;font-weight:700;font-size:.85rem;z-index:101}
+#lbh{position:fixed;top:calc(16px + env(safe-area-inset-top));left:14px;color:#fff;font-size:.78rem;z-index:101}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#FFFDF8;padding:10px 16px;border-radius:11px;font-size:.84rem;z-index:120;max-width:88%;display:none}
+mjx-container{overflow-x:auto;overflow-y:hidden;max-width:100%}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="panel"><span class="muted">Nalagam…</span></div></div>
+<div id="lb"><span id="lbh">tapni sliko za povečavo</span><button id="lbx">Zapri</button><img id="lbi" alt="izrezek"></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const MIC='<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg>';
+const SUBJ_COL=[['#6A5ACD','#EDEBFB'],['#0F8C6E','#E2F4EE'],['#B0741A','#FBEFDB'],['#2F6FB0','#E4EEF8'],['#A6456B','#F8E6EE']];
+const INTERVALS=[0,1,3,7,16,35];
+const LS_DB='ustniTrener.db.v1';
+const LS_API='ustniTrener.apiKey';
+const LS_MODEL='ustniTrener.model';
+const DEFAULT_MODEL='claude-sonnet-5';
+
+let db=null,dictCap=null;
+let cards=[],attempts=[];
+let view='menu',filt='all',panelOpen=false;
+let queue=null,qPos=0,cur=null;           // cur = card object
+let S=null;                               // per-question state
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.display='none',3200);}
+function today(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Ljubljana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function addDays(d,n){const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10);}
+function typeset(el){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise(el?[el]:undefined).catch(()=>{});}
+function subjects(){return Array.from(new Set(cards.map(c=>c.subject))).sort();}
+function colOf(s){const i=Math.max(0,subjects().indexOf(s))%SUBJ_COL.length;return SUBJ_COL[i];}
+function gcls(r){return r==null?'':(r>=8?'g3':(r>=5?'g2':'g1'));}
+function scoreOf(a){            // učinkovita ocena poskusa 1–10 ali null
+  if(!a)return null;
+  if(a.ai&&typeof a.ai.ocena==='number')return a.ai.ocena;
+  if(a.ai&&typeof a.ai.correct==='boolean')return a.ai.correct&&!a.ai.partial?9:(a.ai.partial?6:3);
+  if(a.kind==='self'&&typeof a.ownScore==='number')return a.ownScore;
+  return null;}
+
+/* ---------- lokalna shramba (localStorage) — nadomešča Claude artifact db ---------- */
+function lsLoadAll(){try{return JSON.parse(localStorage.getItem(LS_DB)||'{}')||{};}catch(e){return {};}}
+function lsSaveAll(all){try{localStorage.setItem(LS_DB,JSON.stringify(all));}catch(e){console.error(e);throw e;}}
+function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
+function makeDb(){
+  return {
+    collection(name){
+      return {
+        async get(){
+          const all=lsLoadAll(),coll=all[name]||{};
+          return {docs:Object.keys(coll).map(id=>({id,data:()=>clone(coll[id])}))};
+        }
+      };
+    },
+    doc(path){
+      const i=path.indexOf('/'),name=path.slice(0,i),id=path.slice(i+1);
+      return {
+        async get(){
+          const all=lsLoadAll(),coll=all[name]||{},d=coll[id];
+          return {exists:d!=null,id,data:()=>clone(d)};
+        },
+        async set(obj){
+          const all=lsLoadAll();all[name]=all[name]||{};all[name][id]=clone(obj);lsSaveAll(all);
+        },
+        async update(partial){
+          const all=lsLoadAll();all[name]=all[name]||{};
+          all[name][id]=Object.assign({},all[name][id]||{},clone(partial));
+          lsSaveAll(all);
+        }
+      };
+    },
+    async exportAll(){return lsLoadAll();},
+    async importAll(obj){lsSaveAll(obj);}
+  };
+}
+function docs(res){return (res&&res.docs?res.docs:res||[]).map(d=>Object.assign({id:d.id},d.data?d.data():d.data));}
+
+/* ---------- narekovanje govora — Web Speech API (vgrajeno v brskalnik, brez Claude računa) ---------- */
+function makeDictation(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return null;
+  let rec=null,partialCb=null,finalCb=null,stateCb=null;
+  function build(){
+    const r=new SR();
+    r.lang='sl-SI';r.continuous=true;r.interimResults=true;
+    r.onresult=e=>{let interim='',final='';
+      for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;
+        if(e.results[i].isFinal)final+=t+' ';else interim+=t;}
+      if(interim&&partialCb)partialCb({text:interim});
+      if(final.trim()&&finalCb)finalCb({text:final.trim()});};
+    r.onend=()=>{if(stateCb)stateCb({state:'idle'});};
+    r.onerror=()=>{if(stateCb)stateCb({state:'idle'});};
+    return r;
+  }
+  return {
+    start(){try{rec=build();rec.start();}catch(e){const err=new Error('Mikrofon ni na voljo.');err.code='not_granted';return Promise.reject(err);}
+      if(stateCb)stateCb({state:'listening'});return Promise.resolve();},
+    stop(){if(rec)try{rec.stop();}catch(e){}return Promise.resolve();},
+    onPartial(cb){partialCb=cb;},
+    onFinal(cb){finalCb=cb;},
+    onState(cb){stateCb=cb;}
+  };
+}
+
+/* ---------- zagon ---------- */
+async function init(){
+  db=makeDb();
+  dictCap=makeDictation();
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+  await reload();render();
+}
+async function reload(){
+  try{cards=docs(await db.collection('cards').get());}catch(e){toast('Napaka pri branju kartic: '+(e.message||e));}
+  try{attempts=docs(await db.collection('attempts').get());}catch(e){attempts=[];}
+}
+
+/* ---------- vrsta ---------- */
+function dueList(){const t=today();
+  const d=cards.filter(c=>c.unfinished===true||(c.dueDate&&c.dueDate<=t));
+  d.sort((a,b)=>{if(!!a.unfinished!==!!b.unfinished)return a.unfinished?-1:1;
+    if(!!a.star!==!!b.star)return a.star?-1:1;
+    const ra=a.lastScore==null?99:a.lastScore,rb=b.lastScore==null?99:b.lastScore;
+    if((a.dueDate||'')!==(b.dueDate||''))return (a.dueDate||'').localeCompare(b.dueDate||'');
+    return ra-rb;});
+  return d;}
+function doneToday(){const t=today();return new Set(attempts.filter(a=>a.date===t&&scoreOf(a)!=null).map(a=>a.conceptId)).size;}
+function streak(){const set=new Set(attempts.map(a=>a.date));let n=0,d=today();
+  if(!set.has(d))d=addDays(d,-1);while(set.has(d)){n++;d=addDays(d,-1);}return n;}
+
+/* ---------- render ---------- */
+function render(){
+  if(view==='menu')return renderMenu();
+  if(view==='study')return renderStudy();
+  if(view==='povzetek')return renderPovzetek();
+  if(view==='uvoz')return renderUvoz();
+  if(view==='test')return renderTest();
+  if(view==='nastavitve')return renderNastavitve();
+}
+function backBar(t){return '<div class="top"><button id="back">← seznam</button><div class="hd-t" style="margin-left:4px">'+esc(t)+'</div></div>';}
+function wireBack(){$('back').onclick=()=>{view='menu';render();window.scrollTo(0,0);};}
+
+function renderMenu(){
+  const due=dueList(),done=doneToday(),goal=done+due.length,frac=goal?Math.min(1,done/goal):0,C=2*Math.PI*22;
+  const inProg=queue&&qPos<queue.length;
+  const dateLbl=new Intl.DateTimeFormat('sl-SI',{timeZone:'Europe/Ljubljana',day:'numeric',month:'long'}).format(new Date());
+  let h='<div class="hd"><div class="hd-t">Ustni trener <span>· danes, '+esc(dateLbl)+'</span></div>'+
+    '<button class="gear'+(panelOpen?' on':'')+'" id="gear">Več</button></div>'+
+    '<div class="hero"><div class="hrow"><div class="ring"><svg width="56" height="56" viewBox="0 0 56 56"><circle class="bg" cx="28" cy="28" r="22"></circle>'+
+    '<circle class="fg" cx="28" cy="28" r="22" stroke-dasharray="'+(frac*C).toFixed(1)+' '+C.toFixed(1)+'"></circle></svg><div class="lab"><b>'+done+'/'+goal+'</b></div></div>'+
+    '<div class="hstat"><div class="big">'+(due.length?('Še '+due.length+' '+(due.length===1?'kartica':'kartic')+' danes'):(cards.length?'Dnevni cilj dosežen':'Ni kartic — uvozi paket'))+'</div>'+
+    '<div class="sm">'+subjects().map(s=>esc(s)+' <b>'+due.filter(c=>c.subject===s).length+'</b>').join(' · ')+(cards.length?' · skupaj '+cards.length:'')+'</div></div>'+
+    '<div class="streak"><b>'+streak()+'</b><span>dni</span></div></div></div>'+
+    '<div class="setp'+(panelOpen?' show':'')+'"><button id="pPov">Povzetek</button><button id="pUvoz">Uvoz</button><button id="pTest">Preizkus AI</button><button id="pSet">Nastavitve</button></div>'+
+    '<button class="rand" id="start"'+(due.length?'':' disabled')+'>'+(inProg?'Nadaljuj':'Začni učenje')+(due.length?' — '+due.length+' za danes':'')+'</button>'+
+    '<div class="filts"><button data-f="all">Vse</button><button data-f="due">Danes</button><button data-f="weak">Slabe</button><button data-f="star">Označene</button></div>';
+  const t=today();let any=false;
+  subjects().forEach(s=>{const col=colOf(s);let rows='',n=0;
+    cards.filter(c=>c.subject===s).sort((a,b)=>a.id.localeCompare(b.id)).forEach(c=>{n++;
+      const r=c.lastScore;
+      if(filt==='weak'&&!(r!=null&&r<=5))return;
+      if(filt==='star'&&!c.star)return;
+      if(filt==='due'&&!(c.unfinished||(c.dueDate&&c.dueDate<=t)))return;
+      rows+='<button class="qrow '+gcls(r)+'" data-id="'+esc(c.id)+'"><span class="n">'+n+'.</span><span class="t">'+(c.star?'★ ':'')+esc(c.question)+
+        '<small>'+(c.unfinished?'nedokončano':(!c.lastAttemptAt?'novo':(c.dueDate<=t?'za ponovitev':'naslednjič '+esc(c.dueDate))))+'</small></span><span class="sc">'+(r!=null?r:'–')+'</span></button>';});
+    if(rows){any=true;h+='<div class="sect" style="background:'+col[1]+';color:'+col[0]+'">'+esc(s)+'</div><div class="list">'+rows+'</div>';}});
+  if(!any)h+='<div class="rbox">'+(cards.length?'Ni vprašanj v tem filtru.':'Ni še nobene kartice. Odpri Več → Uvoz.')+'</div>';
+  $('app').innerHTML=h;
+  document.querySelectorAll('.filts button').forEach(b=>{b.classList.toggle('on',b.dataset.f===filt);b.onclick=()=>{filt=b.dataset.f;renderMenu();};});
+  document.querySelectorAll('.qrow').forEach(b=>b.onclick=()=>{queue=null;openQ(cards.find(c=>c.id===b.dataset.id));});
+  $('gear').onclick=()=>{panelOpen=!panelOpen;renderMenu();};
+  $('pPov').onclick=()=>{view='povzetek';render();};$('pUvoz').onclick=()=>{view='uvoz';render();};$('pTest').onclick=()=>{view='test';render();};$('pSet').onclick=()=>{view='nastavitve';render();};
+  $('start').onclick=()=>{if(!(queue&&qPos<queue.length)){queue=dueList();qPos=0;}if(queue.length)openQ(queue[qPos]);};
+  typeset($('app'));
+}
+
+/* ---------- vprašanje ---------- */
+function openQ(c){if(!c)return;cur=c;
+  S={phase:(!c.lastAttemptAt&&(c.excerptText||c.excerptImageUrl))?'read':'ask',hint:false,solOpen:false,checked:{},text:'',res:null,busy:false,graded:false,self:null,live:false};
+  view='study';render();window.scrollTo(0,0);}
+function excerptHtml(c){return (c.excerptText?'<div class="ansbox">'+esc(c.excerptText)+'</div>':'')+
+  (c.excerptImageUrl?'<div class="sghint" style="margin-top:9px">Izrezek iz PDF-ja — tapni za povečavo</div><img class="cropimg" src="'+esc(c.excerptImageUrl)+'" alt="izrezek">':'')||
+  '<div class="rbox">Ta kartica nima izrezka.</div>';}
+function renderStudy(){const c=cur,col=colOf(c.subject);
+  document.documentElement.style.setProperty('--ac',col[0]);document.documentElement.style.setProperty('--acbg',col[1]);
+  const due=dueList(),done=doneToday(),goal=done+due.length,fr=goal?Math.round(done/goal*100):0;
+  const pos=queue?(' · '+(qPos+1)+'/'+queue.length):'';
+  let h='<div class="top"><button id="back">← seznam</button></div>'+
+    '<div class="dayline"><div class="dl-bar"><i style="width:'+fr+'%"></i></div><div class="dl-txt">'+done+'/'+goal+(due.length?' · še '+due.length:'')+'</div></div>';
+  if(S.phase==='read'){
+    h+='<div class="qcard"><span class="qtag">'+esc(c.subject)+' · novo'+pos+'</span><div class="qsrc">'+esc(c.pdfRef||'')+'</div>'+
+      '<div class="speak" style="margin-top:6px">Preberi izrezek. Ko ga skriješ, dobiš eno vprašanje.</div></div>'+excerptHtml(c)+
+      '<div style="height:10px"></div><button class="grade" id="hide">Prebral sem — skrij in vprašaj</button>';
+    $('app').innerHTML=h;wireBack();wireImgs();$('hide').onclick=()=>{S.phase='ask';render();window.scrollTo(0,0);};typeset($('app'));return;}
+  const ks=Array.isArray(c.criteria)?c.criteria:[];
+  h+='<div class="qcard"><span class="qtag">'+esc(c.subject)+pos+'</span><div class="qsrc">'+esc(c.pdfRef||'')+'</div>'+
+    '<div class="qt">'+esc(c.question)+'</div><div class="speak">Najprej povej odgovor <b>na glas</b> — nato preveri spodaj.</div></div>';
+  if(ks.length)h+='<button class="hintb" id="hint">'+(S.hint?'Skrij namig':'Namig — ključne točke')+'</button>'+
+    (S.hint?'<div class="kbox"><div class="chips">'+ks.map(k=>'<span class="kchip">'+esc(k)+'</span>').join('')+'</div></div>':'');
+  h+='<button class="solbtn'+(S.solOpen?' open':'')+'" id="sol">'+(S.solOpen?'Skrij izrezek':'Pokaži izrezek')+'</button>'+
+    '<div class="sol'+(S.solOpen?' show':'')+'">'+excerptHtml(c)+'</div>'+
+    '<div class="sep"><span>ocenjevanje</span></div>'+
+    '<div class="inrow"><button class="mic'+(S.live?' live':'')+'" id="mic"'+(dictCap?'':' disabled')+'>'+MIC+'<span>'+(S.live?'ustavi':'govori')+'</span></button>'+
+    '<textarea id="ta" placeholder="Govori ali tipkaj odgovor. Prepis lahko pred oddajo popraviš.">'+esc(S.text)+'</textarea></div>'+
+    '<div class="micst" id="micst">'+(dictCap?'':'Narekovanje v tem brskalniku ni podprto — tipkaj odgovor.')+'</div>'+
+    '<button class="grade" id="grade"'+(S.busy?' disabled':'')+'>'+(S.busy?'Ocenjujem…':(S.res&&!S.res.ok?'Poskusi znova z AI':'Oceni z AI'))+'</button><div id="res">'+resHtml()+'</div>';
+  if(ks.length){const on=Object.keys(S.checked).filter(k=>S.checked[k]).length;
+    h+='<div class="kbox"><div class="lab">Odkljukaj, kar si <b>zares</b> povedal na glas:</div><div class="chips">'+
+      ks.map((k,i)=>'<span class="kchip tog'+(S.checked[i]?' on':'')+'" data-i="'+i+'">'+esc(k)+'</span>').join('')+'</div>'+
+      '<div class="ksugg">'+(on?('Povedal '+on+'/'+ks.length+' → predlog ocene: '+Math.max(1,Math.min(10,Math.round(on/ks.length*10)))):'')+'</div></div>';}
+  h+='<div class="sghint">Lastna ocena 1–10 (shrani se ločeno od AI):</div><div class="nums">'+
+    [1,2,3,4,5,6,7,8,9,10].map(n=>'<div class="rnum '+(n<=4?'g1':n<=7?'g2':'g3')+(S.self===n?' sel':'')+'" data-o="'+n+'">'+n+'</div>').join('')+'</div>'+
+    '<div class="acts"><button class="b-next" id="next">Naslednje →</button></div>'+
+    '<button class="star2'+(c.star?' on':'')+'" id="star">'+(c.star?'★ označeno (težje)':'☆ označi (težje)')+'</button>';
+  $('app').innerHTML=h;wireBack();wireImgs();
+  const ta=$('ta');ta.oninput=()=>{S.text=ta.value;};
+  if($('hint'))$('hint').onclick=()=>{S.hint=!S.hint;if(!S.graded)S.usedHint=true;render();};
+  $('sol').onclick=()=>{S.solOpen=!S.solOpen;if(S.solOpen&&!S.graded)S.usedHint=true;render();};
+  document.querySelectorAll('.kchip.tog').forEach(k=>k.onclick=()=>{S.checked[k.dataset.i]=!S.checked[k.dataset.i];render();});
+  document.querySelectorAll('.rnum').forEach(b=>b.onclick=()=>selfGrade(+b.dataset.o));
+  $('grade').onclick=gradeAI;if(dictCap)$('mic').onclick=micToggle;
+  $('star').onclick=async()=>{c.star=!c.star;try{await db.doc('cards/'+c.id).update({star:c.star});}catch(e){}render();};
+  $('next').onclick=nextQ;
+  typeset($('app'));
+}
+function wireImgs(){document.querySelectorAll('.cropimg').forEach(im=>im.onclick=()=>{$('lbi').src=im.src;$('lbi').className='';$('lb').classList.add('show');});}
+$('lbx').onclick=()=>$('lb').classList.remove('show');
+$('lbi').onclick=function(){this.classList.toggle('big');};
+
+function resHtml(){const r=S.res;if(!r)return '';
+  if(r.loading)return '<div class="rbox">Čakam na odgovor modela…</div>';
+  if(!r.ok){const c=r.error.code;
+    const t=c==='not_granted'?'AI ocenjevanje ni dovoljeno (napačen ali zavrnjen API ključ).':c==='rate_limited'?'Model je trenutno zaseden.':c==='no_sample'?'API ključ za AI ocenjevanje ni nastavljen (Več → Nastavitve).':'AI ocena ni uspela.';
+    return '<div class="err"><b>'+t+'</b><br>'+esc(r.error.message||'')+'<br>Odgovor je shranjen kot neocenjen. Datum ponovitve se ni spremenil. Poskusi znova ali se oceni sam.</div>';}
+  const a=r.ai,oc=a.ocena,col=oc<=4?'var(--bad)':(oc<=7?'var(--warn)':'var(--ok)');
+  let h='<div class="bigsc" style="color:'+col+'">'+oc+'<small>/10</small></div>';
+  if(a.drzi)h+='<div class="rbox"><b>Kaj drži:</b> '+esc(a.drzi)+'</div>';
+  if(a.manjka)h+='<div class="rbox plus"><b>Za 10 bi moral povedati še:</b><div style="margin-top:6px">'+esc(a.manjka)+'</div></div>';
+  else h+='<div class="rbox" style="text-align:center">Popolno — nič ne manjka</div>';
+  if(a.podvprasanje)h+='<div class="rbox"><b>Podvprašanje za naslednjič:</b> '+esc(a.podvprasanje)+'</div>';
+  if(Array.isArray(a.merila)&&a.merila.length)h+='<div class="rbox"><b>Po merilih:</b><ul>'+a.merila.map(m=>'<li>'+(m.ok?'✓ ':'✗ ')+esc(m.merilo)+'</li>').join('')+'</ul>'+
+    '<span class="muted">'+(S.usedHintAtGrade?'z namigom':'samostojno')+'</span></div>';
+  return h;}
+
+async function micToggle(){
+  if(!dictCap){toast('Narekovanje v tem brskalniku ni na voljo — tipkaj.');return;}
+  if(S.live){try{await dictCap.stop();}catch(e){}return;}
+  try{
+    dictCap.onPartial(({text})=>{const m=$('micst');if(m)m.textContent=text;});
+    dictCap.onFinal(({text})=>{S.text=(S.text?S.text+' ':'')+text;const ta=$('ta');if(ta)ta.value=S.text;const m=$('micst');if(m)m.textContent='';S.voice=true;});
+    dictCap.onState(({state})=>{const was=S.live;S.live=(state==='listening');if(was!==S.live&&view==='study'){const ta=$('ta');if(ta)S.text=ta.value;render();}});
+    await dictCap.start();
+  }catch(e){toast(e&&e.code==='not_granted'?'Mikrofon ni dovoljen — tipkaj odgovor.':'Narekovanje trenutno ni mogoče.');}
+}
+
+/* ---------- AI klic (neposredno na Anthropic API, lasten API ključ) ---------- */
+function gradingPrompt(c,answer,hint){return 'Si strog, a pošten izpraševalec na ustnem izpitu (FE, elektrotehnika). Ocenjuj SAMO po spodnjih merilih in učni opori, ne po lastnem okusu.\n'+
+  'PREDMET: '+c.subject+'\nVIR: '+(c.pdfRef||'')+'\nVPRAŠANJE: '+c.question+'\nUČNA OPORA (izrezek): '+(c.excerptText||'(samo slika, ni besedila)')+
+  '\nPOTRJENA MERILA:\n'+(c.criteria||[]).map((m,i)=>(i+1)+'. '+m).join('\n')+
+  '\n\nODGOVOR ŠTUDENTA (prepis govora ali tipkano; napake prepisa ne štej): "'+answer+'"\nNamig uporabljen: '+(hint?'DA':'NE')+
+  '\n\nVrni SAMO veljaven JSON brez ograd in brez besedila okrog:\n{"ocena":<celo število 1-10>,"drzi":"<kaj v odgovoru drži, 1-2 povedi>","manjka":"<ENA najpomembnejša konkretna vrzel, zapisana tako, kot bi jo moral povedati; prazen niz če je ocena 10>","podvprasanje":"<eno kratko podvprašanje za naslednji poskus; prazen niz če ni potrebno>","merila":[{"merilo":"<besedilo merila>","ok":true|false}]}\n'+
+  'V "merila" vrni vsa potrjena merila po vrsti. Piši slovensko. Formule piši v LaTeX med \\\\( in \\\\) s PODVOJENIMI poševnicami. Brez splošnih nasvetov.';}
+function safeParse(t){if(!t)return null;let s=String(t).trim();const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>=0&&b>a)s=s.slice(a,b+1);
+  try{return JSON.parse(s);}catch(e){}
+  try{return JSON.parse(s.replace(/\\(?!["\\\/bfnrtu])/g,'\\\\'));}catch(e){}
+  try{return JSON.parse(s.replace(/\\\\|\\(?=[a-zA-Z(){}\[\]|,;:. ])/g,m=>m==='\\\\'?m:'\\\\'));}catch(e){}
+  return null;}
+function getApiKey(){return (localStorage.getItem(LS_API)||'').trim();}
+function getModel(){return (localStorage.getItem(LS_MODEL)||'').trim()||DEFAULT_MODEL;}
+async function callAnthropic(prompt){
+  const key=getApiKey();
+  if(!key){const e=new Error('API ključ ni nastavljen. Odpri Več → Nastavitve.');e.code='no_sample';throw e;}
+  let resp;
+  try{
+    resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:getModel(),max_tokens:800,messages:[{role:'user',content:prompt}]})
+    });
+  }catch(networkErr){const e=new Error('Klic do Anthropic API ni uspel (omrežje ali CORS): '+(networkErr&&networkErr.message||networkErr));e.code='error';throw e;}
+  if(!resp.ok){
+    let body='';try{body=(await resp.json());body=body.error&&body.error.message||JSON.stringify(body);}catch(e){}
+    const e=new Error('API napaka '+resp.status+(body?': '+body:''));
+    e.code=resp.status===401?'not_granted':(resp.status===429?'rate_limited':'error');throw e;}
+  const data=await resp.json();
+  const text=(data.content&&data.content[0]&&data.content[0].text)||'';
+  return {text,modelApplied:data.model||''};
+}
+async function callGrader(c,answer,hint){
+  try{
+    const r=await callAnthropic(gradingPrompt(c,answer,hint));
+    const o=safeParse(r&&r.text);
+    const oc=o?Math.round(Number(o.ocena)):NaN;
+    if(!o||!(oc>=1&&oc<=10))return {ok:false,error:{code:'bad_output',message:'Model je vrnil nepričakovan odgovor: '+String(r&&r.text||'').slice(0,160)}};
+    return {ok:true,model:r.modelApplied||'',ai:{ocena:oc,drzi:String(o.drzi||''),manjka:String(o.manjka||''),podvprasanje:String(o.podvprasanje||''),
+      merila:Array.isArray(o.merila)?o.merila.map(m=>({merilo:String(m.merilo||''),ok:!!m.ok})):[]}};
+  }catch(e){return {ok:false,error:{code:(e&&e.code)||'error',message:(e&&e.message)||String(e)}};}
+}
+
+/* ---------- shranjevanje poskusa ---------- */
+function schedule(c,score,hint){const t=today(),lvl=c.intervalLevel||0;let nl=lvl,due=t,again=0;
+  if(score>=8&&!hint){nl=Math.min(lvl+1,INTERVALS.length-1);due=addDays(t,INTERVALS[nl]);}
+  else if(score>=8){nl=lvl;due=addDays(t,1);}
+  else if(score>=5){nl=Math.max(lvl-1,0);due=addDays(t,1);again=4;}
+  else{nl=0;due=t;again=2;}
+  return {nl,due,again};}
+async function saveAttempt(c,rec){const ts=Date.now();
+  const a=Object.assign({conceptId:c.id,subject:c.subject,date:today(),first:!c.lastAttemptAt,timestamp:ts},rec);
+  try{await db.doc('attempts/'+c.id+'__'+ts).set(a);attempts.push(a);}catch(e){console.error(e);toast('Poskusa ni bilo mogoče shraniti.');}
+  return a;}
+async function applyScore(c,score,hint){const s=schedule(c,score,hint);
+  const hist=(c.history||[]).concat([{date:today(),ocena:score,hint:!!hint}]).slice(-12);
+  const upd={unfinished:false,intervalLevel:s.nl,dueDate:s.due,lastAttemptAt:Date.now(),lastScore:score,history:hist};
+  try{await db.doc('cards/'+c.id).update(upd);Object.assign(c,upd);}catch(e){console.error(e);toast('Urnika ni bilo mogoče shraniti.');}
+  if(queue&&s.again&&!S.requeued){S.requeued=true;queue.splice(Math.min(qPos+1+s.again,queue.length),0,c);}
+}
+async function gradeAI(){const c=cur;const ans=(S.text||'').trim();
+  if(!ans){toast('Najprej povej ali napiši odgovor.');return;}
+  if(S.busy)return;
+  const hint=!!S.usedHint;S.usedHintAtGrade=hint;
+  S.busy=true;S.res={loading:true};render();
+  const res=await callGrader(c,ans,hint);
+  if(cur!==c)return;
+  S.busy=false;S.res=res;
+  await saveAttempt(c,{kind:'ai',mode:hint?'hint':'independent',inputMethod:S.voice?'voice':'text',transcript:ans,ownScore:S.self,
+    checked:Object.keys(S.checked).filter(k=>S.checked[k]).map(Number),ai:res.ok?res.ai:null,
+    gradingError:res.ok?null:('['+res.error.code+'] '+res.error.message)});
+  if(res.ok){const was=S.graded;S.graded=true;S.aiOk=true;if(!was)await applyScore(c,res.ai.ocena,hint);}
+  else{try{await db.doc('cards/'+c.id).update({unfinished:true});c.unfinished=true;}catch(e){}}
+  render();const r=$('res');if(r)r.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+async function selfGrade(n){const c=cur;S.self=n;render();
+  const hint=!!S.usedHint;
+  if(S.aiOk||S.graded){await saveAttempt(c,{kind:'own',mode:hint?'hint':'independent',ownScore:n,ai:null,gradingError:null});toast(S.aiOk?'Lastna ocena shranjena ločeno od AI.':'Kartica je že ocenjena; popravek shranjen kot lastna ocena.');return;}
+  const failed=S.res&&S.res.ok===false;
+  await saveAttempt(c,{kind:failed?'own':'self',mode:hint?'hint':'independent',transcript:(S.text||'').trim(),ownScore:n,
+    checked:Object.keys(S.checked).filter(k=>S.checked[k]).map(Number),ai:null,gradingError:null});
+  if(failed){toast('Lastna ocena shranjena. Kartica ostane odprta, ker AI ocena ni uspela.');return;}
+  S.graded=true;await applyScore(c,n,hint);toast('Samoocena shranjena.');render();
+}
+function nextQ(){
+  if(queue&&qPos<queue.length-1){qPos++;openQ(queue[qPos]);return;}
+  if(queue){queue=null;qPos=0;view='menu';render();window.scrollTo(0,0);toast('Vrsta za danes je končana.');return;}
+  view='menu';render();window.scrollTo(0,0);}
+
+/* ---------- povzetek ---------- */
+function summaryFor(date){const by={};
+  const g=s=>by[s]||(by[s]={novih:0,ponovljenih:0,samostojnoPravilnih:0,delnih:0,zNamigom:0,neocenjenih:0,napacnih:0,neodprtih:0,zapadlih:0,napakeApi:0});
+  subjects().forEach(g);
+  const day=attempts.filter(a=>a.date===date&&a.kind!=='own'||(a.date===date&&!a.kind));
+  const per={};day.forEach(a=>{(per[a.conceptId]=per[a.conceptId]||[]).push(a);});
+  Object.keys(per).forEach(id=>{const arr=per[id].sort((x,y)=>x.timestamp-y.timestamp),s=g(arr[0].subject);
+    const c=cards.find(x=>x.id===id);
+    const isNew=arr.some(a=>a.first)||(c&&c.dateAdded===date&&!attempts.some(a=>a.conceptId===id&&a.date<date));
+    if(isNew)s.novih++;else s.ponovljenih++;
+    s.napakeApi+=arr.filter(a=>a.gradingError).length;
+    const scored=arr.filter(a=>scoreOf(a)!=null);
+    if(!scored.length){s.neocenjenih++;return;}
+    const last=scored[scored.length-1],sc=scoreOf(last);
+    if(last.mode==='hint')s.zNamigom++;
+    else if(sc>=8)s.samostojnoPravilnih++;
+    if(sc>=5&&sc<8)s.delnih++;
+    if(sc<5)s.napacnih++;});
+  cards.forEach(c=>{const s=g(c.subject);
+    if((c.dateAdded||'')<=date&&!c.lastAttemptAt&&!per[c.id])s.neodprtih++;
+    if(c.unfinished||(c.dueDate||'')<=date)s.zapadlih++;});
+  return by;}
+function renderPovzetek(d){const date=d||today(),by=summaryFor(date);
+  let h=backBar('Dnevni povzetek')+'<div class="panel"><div style="display:flex;gap:7px"><input class="txt" id="sd" value="'+esc(date)+'"><button class="gear" id="sgo">Prikaži</button></div>'+
+    '<div class="muted" style="margin-top:6px">Šteje različna vprašanja, datum po Europe/Ljubljana.</div></div>';
+  Object.keys(by).sort().forEach(s=>{const x=by[s],col=colOf(s);
+    h+='<div class="panel"><div class="sect" style="margin:0 0 4px;background:'+col[1]+';color:'+col[0]+'">'+esc(s)+'</div>'+
+      '<div class="sgrid"><div class="st h"><b>'+x.novih+'</b><span>novo</span></div><div class="st h"><b>'+x.ponovljenih+'</b><span>ponovljeno</span></div><div class="st h"><b>'+x.neodprtih+'</b><span>še odprto</span></div>'+
+      '<div class="st"><b>'+x.samostojnoPravilnih+'</b><span>samostojno 8+</span></div><div class="st"><b>'+x.delnih+'</b><span>delno 5–7</span></div><div class="st"><b>'+x.napacnih+'</b><span>pod 5</span></div>'+
+      '<div class="st"><b>'+x.zNamigom+'</b><span>z namigom</span></div><div class="st"><b>'+x.neocenjenih+'</b><span>neocenjeno</span></div><div class="st"><b>'+x.zapadlih+'</b><span>zapadle ponovitve</span></div></div>'+
+      (x.napakeApi?'<div class="muted" style="margin-top:6px">Napake AI klica: '+x.napakeApi+'</div>':'')+'</div>';});
+  if(!Object.keys(by).length)h+='<div class="rbox">Ni podatkov.</div>';
+  $('app').innerHTML=h;wireBack();$('sgo').onclick=()=>renderPovzetek($('sd').value.trim());
+  db.doc('daily_stats/'+date).set({bySubject:by,updatedAt:Date.now()}).catch(()=>{});
+}
+
+/* ---------- uvoz ---------- */
+function renderUvoz(){
+  $('app').innerHTML=backBar('Uvoz vprašanj')+
+    '<div class="panel"><label class="filebtn">Izberi .json datoteko<input type="file" accept=".json,application/json" id="fi"></label>'+
+    '<div class="muted">Isti <b>id</b> se nikoli ne podvoji: vsebina se posodobi, ocene in urnik ostanejo.</div><div id="msg" class="rbox" style="display:none"></div></div>'+
+    '<div class="panel"><h2>Ali prilepi JSON</h2><textarea class="mono" id="box" placeholder="[ { ... } ]"></textarea>'+
+    '<button class="rand" id="imp" style="margin-top:8px">Uvozi iz polja</button>'+
+    '<pre class="raw muted">{ "id": "trajni-id-pojma", "subject": "MAT", "date": "2026-11-25",\n  "pdfRef": "vir, stran", "excerptText": "…",\n  "excerptImageUrl": "data:image/webp;base64,… ali null",\n  "question": "…", "criteria": ["…"], "kind": "qa" }</pre></div>'+
+    '<div class="panel"><h2>Varnostna kopija</h2><div class="muted">Vsi podatki so shranjeni samo v tem brskalniku (localStorage). Redno izvozi kopijo, da jih ne izgubiš ob menjavi naprave ali brisanju podatkov brskalnika.</div>'+
+    '<div class="acts" style="margin-top:10px"><button class="b-sec" id="exp">Izvozi kopijo (.json)</button><label class="filebtn" style="flex:1;margin:0"><span style="display:block">Uvozi kopijo</span><input type="file" accept=".json,application/json" id="impAll"></label></div></div>';
+  wireBack();
+  $('imp').onclick=()=>doImport($('box').value);
+  $('fi').onchange=ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;say('Berem datoteko ('+Math.round(f.size/1024)+' KB)…');
+    const r=new FileReader();r.onload=()=>doImport(r.result);r.onerror=()=>say('Datoteke ni bilo mogoče prebrati.');r.readAsText(f);};
+  $('exp').onclick=async()=>{const all=await db.exportAll();const blob=new Blob([JSON.stringify(all,null,0)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ustni-trener-kopija-'+today()+'.json';a.click();URL.revokeObjectURL(a.href);};
+  $('impAll').onchange=ev=>{const f=ev.target.files&&ev.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=async()=>{try{await db.importAll(JSON.parse(r.result));await reload();say('Varnostna kopija uvožena.');}catch(e){say('Napaka pri uvozu kopije: '+e.message);}};r.readAsText(f);};
+}
+function say(t){const m=$('msg');if(m){m.style.display='block';m.textContent=t;}}
+async function doImport(raw){let items;
+  try{items=JSON.parse(raw);}catch(e){say('JSON ni veljaven: '+e.message);return;}
+  if(items&&!Array.isArray(items)&&Array.isArray(items.questions))items=items.questions;
+  if(!Array.isArray(items)){say('Pričakovan je seznam vprašanj.');return;}
+  let cr=0,up=0,same=0,bad=0;const badIds=[];
+  for(let i=0;i<items.length;i++){const it=items[i];say('Uvažam '+(i+1)+'/'+items.length+'…');
+    if(!it||!it.id||!it.subject||!it.question){bad++;badIds.push(it&&it.id||('#'+(i+1)));continue;}
+    const id=String(it.id).trim().replace(/[^\w\-]/g,'_');
+    const content={subject:String(it.subject),pdfRef:it.pdfRef||'',excerptText:it.excerptText||'',excerptImageUrl:it.excerptImageUrl||null,
+      question:String(it.question),criteria:Array.isArray(it.criteria)?it.criteria.map(String):[],kind:it.kind||'qa'};
+    try{const ref=db.doc('cards/'+id),snap=await ref.get();
+      if(!snap.exists){const d=it.date||today();
+        await ref.set(Object.assign({},content,{dateAdded:d,status:'new',dueDate:d,intervalLevel:0,unfinished:false,lastAttemptAt:null,history:[]}));cr++;}
+      else{const ex=snap.data();
+        if(Object.keys(content).every(k=>JSON.stringify(ex[k]==null?null:ex[k])===JSON.stringify(content[k]==null?null:content[k])))same++;
+        else{await ref.update(content);up++;}}
+    }catch(e){console.error(e);bad++;badIds.push(id+': '+(e.message||e));}}
+  await reload();
+  say('Novih: '+cr+' · posodobljenih: '+up+' · brez sprememb: '+same+' · napak: '+bad+(badIds.length?' ('+badIds.slice(0,4).join('; ')+')':''));
+}
+
+/* ---------- nastavitve ---------- */
+function renderNastavitve(){
+  const key=getApiKey(),model=getModel();
+  $('app').innerHTML=backBar('Nastavitve')+
+    '<div class="panel"><h2>AI ocenjevanje</h2><div class="muted">Aplikacija teče samostojno, brez Claude računa. Za AI oceno odgovorov potrebuje tvoj lasten Anthropic API ključ — dobiš ga na <b>console.anthropic.com</b> (API Keys). Ključ se shrani samo lokalno v tem brskalniku in gre neposredno na Anthropic, nikamor drugam.</div>'+
+    '<div style="height:10px"></div><input class="txt" id="k" type="password" placeholder="sk-ant-..." value="'+esc(key)+'" style="width:100%;margin-bottom:8px">'+
+    '<div class="muted" style="margin-bottom:4px">Model (API ime):</div>'+
+    '<input class="txt" id="m" type="text" placeholder="'+esc(DEFAULT_MODEL)+'" value="'+esc(model===DEFAULT_MODEL?'':model)+'" style="width:100%;margin-bottom:10px">'+
+    '<div class="acts"><button class="b-next" id="save">Shrani</button><button class="b-sec" id="clear">Izbriši ključ</button></div>'+
+    '<div class="muted" id="st" style="margin-top:4px"></div></div>'+
+    '<div class="panel"><h2>Brez AI ključa</h2><div class="muted">Kartice lahko ocenjuješ tudi ročno z gumbi 1–10 (shrani se kot lastna ocena) — ponavljanje in urnik delujeta enako, samo brez samodejne AI povratne informacije.</div></div>'+
+    '<div class="panel"><h2>Narekovanje</h2><div class="muted">'+(dictCap?'Narekovanje govora deluje prek vgrajenega prepoznavanja govora v brskalniku (najbolje v Chrome). Ob prvi uporabi dovoli dostop do mikrofona.':'Ta brskalnik ne podpira narekovanja govora — uporabi Chrome, ali pa odgovore tipkaj.')+'</div></div>';
+  wireBack();
+  $('save').onclick=()=>{localStorage.setItem(LS_API,$('k').value.trim());const m=$('m').value.trim();if(m)localStorage.setItem(LS_MODEL,m);else localStorage.removeItem(LS_MODEL);$('st').textContent='Shranjeno.';};
+  $('clear').onclick=()=>{localStorage.removeItem(LS_API);localStorage.removeItem(LS_MODEL);$('k').value='';$('m').value='';$('st').textContent='Ključ izbrisan.';};
+}
+
+/* ---------- preizkus AI (nič se ne shrani) ---------- */
+function renderTest(){
+  $('app').innerHTML=backBar('Preizkus AI ocenjevanja')+
+    '<div class="panel"><div class="muted">Dva sintetična odgovora na osnovno trditev gresta skozi isti klic modela kot pri učenju. Nič se ne zapiše med kartice ali poskuse.</div>'+
+    '<button class="rand" id="run" style="margin-top:10px">Zaženi preizkus</button><div id="tout"></div></div>';
+  wireBack();$('run').onclick=runTest;}
+async function runTest(){const btn=$('run');btn.disabled=true;
+  const tc={subject:'TEST',pdfRef:'sintetični primer',question:'Kaj pove Ohmov zakon?',
+    excerptText:'Ohmov zakon: napetost na uporu je enaka produktu upornosti in toka, U = R·I. Tok je premo sorazmeren napetosti in obratno sorazmeren upornosti.',
+    criteria:['pove zvezo U = R·I (ali enakovredno I = U/R)','pove, da je tok premo sorazmeren napetosti in obratno sorazmeren upornosti']};
+  const cases=[['Pravilen odgovor','Napetost na uporu je upornost krat tok, torej U je R krat I. Tok raste sorazmerno z napetostjo, pri večji upornosti pa je manjši.'],
+               ['Napačen odgovor','Ohmov zakon pravi, da je moč enaka napetosti deljeno s tokom in da upornost ne vpliva na tok.']];
+  const out=cases.map(()=>null);
+  const draw=()=>{$('tout').innerHTML=cases.map((c,i)=>{const r=out[i];
+    return '<div class="sep"><span>'+esc(c[0])+'</span></div><div class="muted">"'+esc(c[1])+'"</div>'+
+      (!r?'<div class="rbox">čaka</div>':r.loading?'<div class="rbox">Čakam na odgovor modela…</div>':
+       r.ok?'<div class="bigsc" style="font-size:2.4rem;color:'+(r.ai.ocena>=8?'var(--ok)':r.ai.ocena>=5?'var(--warn)':'var(--bad)')+'">'+r.ai.ocena+'<small>/10</small></div>'+
+            '<div class="rbox"><b>Dejanski rezultat klica</b>'+(r.model?' ('+esc(r.model)+')':'')+'<pre class="raw">'+esc(JSON.stringify(r.ai,null,1))+'</pre></div>':
+       '<div class="err"><b>Klic ni uspel</b> ['+esc(r.error.code)+']<br>'+esc(r.error.message)+'</div>');}).join('');};
+  for(let i=0;i<cases.length;i++){out[i]={loading:true};draw();out[i]=await callGrader(tc,cases[i][1],false);draw();
+    if(!out[i].ok&&(out[i].error.code==='not_granted'||out[i].error.code==='no_sample'))break;}
+  const ok=out[0]&&out[0].ok&&out[1]&&out[1].ok;
+  if(ok)$('tout').insertAdjacentHTML('beforeend','<div class="rbox'+(out[0].ai.ocena>out[1].ai.ocena?'':' plus')+'">'+
+    (out[0].ai.ocena>=8&&out[1].ai.ocena<=4?'Ocenjevanje deluje: pravilen odgovor je dobil visoko, napačen nizko oceno.':'Klica sta uspela, a oceni nista jasno ločeni — preveri izpis zgoraj.')+'</div>');
+  btn.disabled=false;btn.textContent='Zaženi znova';}
+
+init();
+})();
+</script>
+</body>
+</html>
