@@ -21,15 +21,20 @@ Samostojna spletna aplikacija (PWA) za ustno učenje predmetov MAT (Matematika) 
   najbolje deluje v Chrome). Brez Claude računa, a potrebuje dovoljenje za mikrofon in
   (pri Chrome) povezavo z internetom.
 - **AI ocenjevanje odgovorov**: ker aplikacija ne teče več znotraj Claude.ai, nima več
-  brezplačnega dostopa do modela prek Claude artifact zmogljivosti. Namesto tega kliče
-  **neposredno Anthropic API** s tvojim lastnim API ključem:
-  1. Ustvari ključ na [console.anthropic.com](https://console.anthropic.com/settings/keys)
-     (plačuje se po dejanski porabi, groba cena nekaj centov za več deset ocenjevanj).
-  2. V aplikaciji odpri **Več → Nastavitve** in vnesi ključ (shrani se samo lokalno v tem
-     brskalniku, v localStorage, in gre neposredno na `api.anthropic.com` — nikamor drugam).
-  3. Brez ključa aplikacija deluje naprej — kartice lahko oceniš ročno z gumbi 1–10
-     (shrani se kot lastna ocena), ponavljanje in urnik delujeta enako.
-  - Gumb **Preizkus AI** (Več → Preizkus AI) preveri, da klic in ocenjevanje delujeta.
+  brezplačnega dostopa do modela prek Claude artifact zmogljivosti. Namesto tega v
+  **Več → Nastavitve** izbereš ponudnika in vneseš svoj lasten API ključ — aplikacija
+  nato kliče ponudnika neposredno iz brskalnika:
+  - **Anthropic (Claude)** — ključ na [console.anthropic.com](https://console.anthropic.com/settings/keys).
+  - **Google Gemini** — ključ na [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+    (ima brezplačno kvoto).
+
+  Ključ se shrani samo lokalno v tem brskalniku (localStorage) in gre neposredno k
+  izbranemu ponudniku — nikamor drugam. Model (API ime) je prav tako nastavljiv, če se
+  privzeti spremeni ali umakne.
+  Brez ključa aplikacija deluje naprej — kartice lahko oceniš ročno z gumbi 1–10
+  (shrani se kot lastna ocena), ponavljanje in urnik delujeta enako.
+  Gumb **Preizkus AI** (Več → Preizkus AI) preveri, da klic in ocenjevanje delujeta
+  za trenutno izbranega ponudnika.
 
 ## Struktura
 

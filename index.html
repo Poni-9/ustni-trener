@@ -161,9 +161,13 @@ const MIC='<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 
 const SUBJ_COL=[['#6A5ACD','#EDEBFB'],['#0F8C6E','#E2F4EE'],['#B0741A','#FBEFDB'],['#2F6FB0','#E4EEF8'],['#A6456B','#F8E6EE']];
 const INTERVALS=[0,1,3,7,16,35];
 const LS_DB='ustniTrener.db.v1';
+const LS_PROVIDER='ustniTrener.provider';
 const LS_API='ustniTrener.apiKey';
 const LS_MODEL='ustniTrener.model';
 const DEFAULT_MODEL='claude-sonnet-5';
+const LS_GKEY='ustniTrener.geminiApiKey';
+const LS_GMODEL='ustniTrener.geminiModel';
+const DEFAULT_GMODEL='gemini-flash-latest';
 
 let db=null,dictCap=null;
 let cards=[],attempts=[];
@@ -377,7 +381,7 @@ $('lbi').onclick=function(){this.classList.toggle('big');};
 function resHtml(){const r=S.res;if(!r)return '';
   if(r.loading)return '<div class="rbox">Čakam na odgovor modela…</div>';
   if(!r.ok){const c=r.error.code;
-    const t=c==='not_granted'?'AI ocenjevanje ni dovoljeno (napačen ali zavrnjen API ključ).':c==='rate_limited'?'Model je trenutno zaseden.':c==='no_sample'?'API ključ za AI ocenjevanje ni nastavljen (Več → Nastavitve).':'AI ocena ni uspela.';
+    const t=c==='not_granted'?'AI ocenjevanje ni dovoljeno (napačen ali zavrnjen API ključ).':c==='rate_limited'?'Model je trenutno zaseden.':c==='no_sample'?'API ključ za AI ocenjevanje ni nastavljen (Več → Nastavitve → izberi ponudnika in vnesi ključ).':'AI ocena ni uspela.';
     return '<div class="err"><b>'+t+'</b><br>'+esc(r.error.message||'')+'<br>Odgovor je shranjen kot neocenjen. Datum ponovitve se ni spremenil. Poskusi znova ali se oceni sam.</div>';}
   const a=r.ai,oc=a.ocena,col=oc<=4?'var(--bad)':(oc<=7?'var(--warn)':'var(--ok)');
   let h='<div class="bigsc" style="color:'+col+'">'+oc+'<small>/10</small></div>';
@@ -412,11 +416,14 @@ function safeParse(t){if(!t)return null;let s=String(t).trim();const a=s.indexOf
   try{return JSON.parse(s.replace(/\\(?!["\\\/bfnrtu])/g,'\\\\'));}catch(e){}
   try{return JSON.parse(s.replace(/\\\\|\\(?=[a-zA-Z(){}\[\]|,;:. ])/g,m=>m==='\\\\'?m:'\\\\'));}catch(e){}
   return null;}
+function getProvider(){const p=(localStorage.getItem(LS_PROVIDER)||'').trim();return p==='gemini'?'gemini':'anthropic';}
 function getApiKey(){return (localStorage.getItem(LS_API)||'').trim();}
 function getModel(){return (localStorage.getItem(LS_MODEL)||'').trim()||DEFAULT_MODEL;}
+function getGeminiKey(){return (localStorage.getItem(LS_GKEY)||'').trim();}
+function getGeminiModel(){return (localStorage.getItem(LS_GMODEL)||'').trim()||DEFAULT_GMODEL;}
 async function callAnthropic(prompt){
   const key=getApiKey();
-  if(!key){const e=new Error('API ključ ni nastavljen. Odpri Več → Nastavitve.');e.code='no_sample';throw e;}
+  if(!key){const e=new Error('Anthropic API ključ ni nastavljen. Odpri Več → Nastavitve.');e.code='no_sample';throw e;}
   let resp;
   try{
     resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -433,9 +440,33 @@ async function callAnthropic(prompt){
   const text=(data.content&&data.content[0]&&data.content[0].text)||'';
   return {text,modelApplied:data.model||''};
 }
+async function callGemini(prompt){
+  const key=getGeminiKey();
+  if(!key){const e=new Error('Google Gemini API ključ ni nastavljen. Odpri Več → Nastavitve.');e.code='no_sample';throw e;}
+  const model=getGeminiModel();
+  let resp;
+  try{
+    resp=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(key),{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    });
+  }catch(networkErr){const e=new Error('Klic do Gemini API ni uspel (omrežje ali CORS): '+(networkErr&&networkErr.message||networkErr));e.code='error';throw e;}
+  if(!resp.ok){
+    let body='';try{const j=await resp.json();body=j.error&&j.error.message||JSON.stringify(j);}catch(e){}
+    const e=new Error('API napaka '+resp.status+(body?': '+body:''));
+    e.code=(resp.status===401||resp.status===403)?'not_granted':(resp.status===429?'rate_limited':'error');throw e;}
+  const data=await resp.json();
+  const parts=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts;
+  const text=(Array.isArray(parts)?parts.map(p=>p.text||'').join(''):'')||'';
+  return {text,modelApplied:model};
+}
+async function callAiProvider(prompt){
+  return getProvider()==='gemini'?callGemini(prompt):callAnthropic(prompt);
+}
 async function callGrader(c,answer,hint){
   try{
-    const r=await callAnthropic(gradingPrompt(c,answer,hint));
+    const r=await callAiProvider(gradingPrompt(c,answer,hint));
     const o=safeParse(r&&r.text);
     const oc=o?Math.round(Number(o.ocena)):NaN;
     if(!o||!(oc>=1&&oc<=10))return {ok:false,error:{code:'bad_output',message:'Model je vrnil nepričakovan odgovor: '+String(r&&r.text||'').slice(0,160)}};
@@ -569,19 +600,44 @@ async function doImport(raw){let items;
 
 /* ---------- nastavitve ---------- */
 function renderNastavitve(){
+  const provider=getProvider();
   const key=getApiKey(),model=getModel();
+  const gkey=getGeminiKey(),gmodel=getGeminiModel();
   $('app').innerHTML=backBar('Nastavitve')+
-    '<div class="panel"><h2>AI ocenjevanje</h2><div class="muted">Aplikacija teče samostojno, brez Claude računa. Za AI oceno odgovorov potrebuje tvoj lasten Anthropic API ključ — dobiš ga na <b>console.anthropic.com</b> (API Keys). Ključ se shrani samo lokalno v tem brskalniku in gre neposredno na Anthropic, nikamor drugam.</div>'+
-    '<div style="height:10px"></div><input class="txt" id="k" type="password" placeholder="sk-ant-..." value="'+esc(key)+'" style="width:100%;margin-bottom:8px">'+
+    '<div class="panel"><h2>AI ocenjevanje</h2><div class="muted">Aplikacija teče samostojno, brez Claude računa. Za AI oceno odgovorov izberi ponudnika in vnesi svoj lasten API ključ — shrani se samo lokalno v tem brskalniku in gre neposredno k ponudniku, nikamor drugam.</div>'+
+    '<div style="height:10px"></div><div class="filts" style="margin-bottom:12px">'+
+    '<button data-p="anthropic" class="'+(provider==='anthropic'?'on':'')+'">Anthropic (Claude)</button>'+
+    '<button data-p="gemini" class="'+(provider==='gemini'?'on':'')+'">Google Gemini</button></div>'+
+    '<div id="provAnthropic" style="display:'+(provider==='anthropic'?'block':'none')+'">'+
+    '<div class="muted" style="margin-bottom:8px">Ključ dobiš na <b>console.anthropic.com</b> → API Keys.</div>'+
+    '<input class="txt" id="k" type="password" placeholder="sk-ant-..." value="'+esc(key)+'" style="width:100%;margin-bottom:8px">'+
     '<div class="muted" style="margin-bottom:4px">Model (API ime):</div>'+
     '<input class="txt" id="m" type="text" placeholder="'+esc(DEFAULT_MODEL)+'" value="'+esc(model===DEFAULT_MODEL?'':model)+'" style="width:100%;margin-bottom:10px">'+
+    '</div>'+
+    '<div id="provGemini" style="display:'+(provider==='gemini'?'block':'none')+'">'+
+    '<div class="muted" style="margin-bottom:8px">Ključ dobiš na <b>aistudio.google.com/apikey</b>.</div>'+
+    '<input class="txt" id="gk" type="password" placeholder="AIza..." value="'+esc(gkey)+'" style="width:100%;margin-bottom:8px">'+
+    '<div class="muted" style="margin-bottom:4px">Model (API ime):</div>'+
+    '<input class="txt" id="gm" type="text" placeholder="'+esc(DEFAULT_GMODEL)+'" value="'+esc(gmodel===DEFAULT_GMODEL?'':gmodel)+'" style="width:100%;margin-bottom:10px">'+
+    '</div>'+
     '<div class="acts"><button class="b-next" id="save">Shrani</button><button class="b-sec" id="clear">Izbriši ključ</button></div>'+
     '<div class="muted" id="st" style="margin-top:4px"></div></div>'+
     '<div class="panel"><h2>Brez AI ključa</h2><div class="muted">Kartice lahko ocenjuješ tudi ročno z gumbi 1–10 (shrani se kot lastna ocena) — ponavljanje in urnik delujeta enako, samo brez samodejne AI povratne informacije.</div></div>'+
     '<div class="panel"><h2>Narekovanje</h2><div class="muted">'+(dictCap?'Narekovanje govora deluje prek vgrajenega prepoznavanja govora v brskalniku (najbolje v Chrome). Ob prvi uporabi dovoli dostop do mikrofona.':'Ta brskalnik ne podpira narekovanja govora — uporabi Chrome, ali pa odgovore tipkaj.')+'</div></div>';
   wireBack();
-  $('save').onclick=()=>{localStorage.setItem(LS_API,$('k').value.trim());const m=$('m').value.trim();if(m)localStorage.setItem(LS_MODEL,m);else localStorage.removeItem(LS_MODEL);$('st').textContent='Shranjeno.';};
-  $('clear').onclick=()=>{localStorage.removeItem(LS_API);localStorage.removeItem(LS_MODEL);$('k').value='';$('m').value='';$('st').textContent='Ključ izbrisan.';};
+  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{localStorage.setItem(LS_PROVIDER,b.dataset.p);renderNastavitve();});
+  $('save').onclick=()=>{
+    localStorage.setItem(LS_API,$('k').value.trim());
+    const m=$('m').value.trim();if(m)localStorage.setItem(LS_MODEL,m);else localStorage.removeItem(LS_MODEL);
+    localStorage.setItem(LS_GKEY,$('gk').value.trim());
+    const gm=$('gm').value.trim();if(gm)localStorage.setItem(LS_GMODEL,gm);else localStorage.removeItem(LS_GMODEL);
+    $('st').textContent='Shranjeno.';
+  };
+  $('clear').onclick=()=>{
+    if(getProvider()==='gemini'){localStorage.removeItem(LS_GKEY);localStorage.removeItem(LS_GMODEL);}
+    else{localStorage.removeItem(LS_API);localStorage.removeItem(LS_MODEL);}
+    renderNastavitve();
+  };
 }
 
 /* ---------- preizkus AI (nič se ne shrani) ---------- */
