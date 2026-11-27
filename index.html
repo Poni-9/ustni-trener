@@ -189,6 +189,7 @@ function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';cle
 function today(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Ljubljana',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 function addDays(d,n){const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10);}
 function typeset(el){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise(el?[el]:undefined).catch(()=>{});}
+function normalizeSubject(s){return /^(MAT|MAT\s+III)$/i.test(String(s).trim())?'MAT III':s;}
 function subjects(){return Array.from(new Set(cards.map(c=>c.subject))).sort();}
 function colOf(s){const i=Math.max(0,subjects().indexOf(s))%SUBJ_COL.length;return SUBJ_COL[i];}
 function gcls(r){return r==null?'':(r>=8?'g3':(r>=5?'g2':'g1'));}
@@ -289,7 +290,7 @@ async function mergeQuestions(items,onProgress=()=>{}){
   for(let i=0;i<items.length;i++){const it=items[i];onProgress('Uvažam '+(i+1)+'/'+items.length+'…');
     if(!it||!it.id||!it.subject||!it.question){bad++;badIds.push(it&&it.id||('#'+(i+1)));continue;}
     const id=String(it.id).trim().replace(/[^\w\-]/g,'_');
-    const content={subject:String(it.subject),pdfRef:it.pdfRef||'',excerptText:it.excerptText||'',excerptImageUrl:it.excerptImageUrl||null,
+    const content={subject:normalizeSubject(String(it.subject)),pdfRef:it.pdfRef||'',excerptText:it.excerptText||'',excerptImageUrl:it.excerptImageUrl||null,
       question:String(it.question),criteria:Array.isArray(it.criteria)?it.criteria.map(String):[],kind:it.kind||'qa'};
     try{const ref=db.doc('cards/'+id),snap=await ref.get();
       if(!snap.exists){const d=it.date||today();
@@ -301,8 +302,8 @@ async function mergeQuestions(items,onProgress=()=>{}){
   return {cr,up,same,bad,badIds};
 }
 async function reload(){
-  try{cards=docs(await db.collection('cards').get());}catch(e){toast('Napaka pri branju kartic: '+(e.message||e));}
-  try{attempts=docs(await db.collection('attempts').get());}catch(e){attempts=[];}
+  try{cards=docs(await db.collection('cards').get()).map(c=>({...c,subject:normalizeSubject(c.subject)}));}catch(e){toast('Napaka pri branju kartic: '+(e.message||e));}
+  try{attempts=docs(await db.collection('attempts').get()).map(a=>({...a,subject:normalizeSubject(a.subject)}));}catch(e){attempts=[];}
 }
 
 /* ---------- vrsta ---------- */
@@ -608,7 +609,7 @@ function renderUvoz(){
     '<div id="imgprev"></div></div>'+
     '<div class="panel"><h2>Ali prilepi JSON</h2><textarea class="mono" id="box" placeholder="[ { ... } ]"></textarea>'+
     '<button class="rand" id="imp" style="margin-top:8px">Uvozi iz polja</button>'+
-    '<pre class="raw muted">{ "id": "trajni-id-pojma", "subject": "MAT", "date": "2026-11-25",\n  "pdfRef": "vir, stran", "excerptText": "…",\n  "excerptImageUrl": "data:image/webp;base64,… ali null",\n  "question": "…", "criteria": ["…"], "kind": "qa" }</pre></div>'+
+    '<pre class="raw muted">{ "id": "trajni-id-pojma", "subject": "MAT III", "date": "2026-11-25",\n  "pdfRef": "vir, stran", "excerptText": "…",\n  "excerptImageUrl": "data:image/webp;base64,… ali null",\n  "question": "…", "criteria": ["…"], "kind": "qa" }</pre></div>'+
     '<div class="panel"><h2>Varnostna kopija</h2><div class="muted">Vsi podatki so shranjeni samo v tem brskalniku (localStorage). Redno izvozi kopijo, da jih ne izgubiš ob menjavi naprave ali brisanju podatkov brskalnika.</div>'+
     '<div class="acts" style="margin-top:10px"><button class="b-sec" id="exp">Izvozi kopijo (.json)</button><label class="filebtn" style="flex:1;margin:0"><span style="display:block">Uvozi kopijo</span><input type="file" accept=".json,application/json" id="impAll"></label></div></div>';
   wireBack();
@@ -664,7 +665,7 @@ async function handleImgFile(file){
       '<button class="b-sec" id="imgfill">Vstavi v predlogo spodaj</button></div>';
     $('imgcopy').onclick=async()=>{try{await navigator.clipboard.writeText(lastImgDataUrl);$('imgcopy').textContent='Kopirano ✓';}catch(e){say('Kopiranje ni uspelo — kodo ročno izberi iz polja spodaj.');}};
     $('imgfill').onclick=()=>{
-      const tpl='[\n  {\n    "id": "spremeni-me",\n    "subject": "MAT",\n    "date": "'+today()+'",\n    "pdfRef": "",\n    "excerptText": "",\n    "excerptImageUrl": "'+lastImgDataUrl+'",\n    "question": "",\n    "criteria": [],\n    "kind": "qa"\n  }\n]';
+      const tpl='[\n  {\n    "id": "spremeni-me",\n    "subject": "MAT III",\n    "date": "'+today()+'",\n    "pdfRef": "",\n    "excerptText": "",\n    "excerptImageUrl": "'+lastImgDataUrl+'",\n    "question": "",\n    "criteria": [],\n    "kind": "qa"\n  }\n]';
       $('box').value=tpl;$('box').scrollIntoView({behavior:'smooth',block:'center'});
       say('Predloga s sliko vstavljena v polje spodaj — dopolni id, predmet in vprašanje, nato "Uvozi iz polja".');
     };
